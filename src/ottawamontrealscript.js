@@ -3,11 +3,12 @@ window.onload=function(){
     const ctx = canvas.getContext('2d');
 
     function fetchStationCoordinates(){
-        fetch('dummy.php')
+        fetch('index.php')
             .then(response =>response.json())
             .then(data =>{
-                const conversionFactor = 1;
-                const convertedData = apply6
+                // const conversionFactor = 1;
+                // const convertedData = apply;
+                convertedData = data;
 
                 drawLines(convertedData);
                 drawStations(convertedData);
