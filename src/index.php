@@ -43,6 +43,7 @@
                 $available_stops[] = $stop_info;
                 $i += 1;
             }
+            
 
         }
         
