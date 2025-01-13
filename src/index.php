@@ -61,8 +61,8 @@ function standardize_coors($available_stops){
     $scale = max($max_x - $min_x, $max_y - $min_y);
 
     foreach($available_stops as $stop){
-        $stop_x = (int) (($stop["x"]-$translation_x)*(2/$scale)*100 + 100);
-        $stop_y = (int) (-($stop["y"]-$translation_y)*(2/$scale)*100 + 100); //flipped negative is a mcgyver solution
+        $stop_x = (int) (($stop["x"]-$translation_x)*(2/$scale)*300 + 300);
+        $stop_y = (int) (-($stop["y"]-$translation_y)*(2/$scale)*300 + 300); //flipped negative is a mcgyver solution
         $standardized_stop = array("x" => $stop_x , "y" => $stop_y, "label" => $stop["label"]);
         $coordinates[] = $standardized_stop;
     }
@@ -170,6 +170,10 @@ function search_next_stop($trip_times, $current_time,$current_date){
     return $i;
 }
 
-setup();
+if ($_GET['type'] == 'update') {
+    update();
+} else {
+    setup();
+}
 
 ?>
