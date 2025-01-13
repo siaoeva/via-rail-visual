@@ -2,19 +2,31 @@ window.onload=function(){
     const canvas = document.getElementById('plotCanvas');
     const ctx = canvas.getContext('2d');
 
+    let setupData = [];
+
     function fetchStationCoordinates(){
         fetch('index.php')
             .then(response =>response.json())
             .then(data =>{
                 // const conversionFactor = 1;
                 // const convertedData = apply;
-                convertedData = data;
-
-                drawLines(convertedData);
-                drawStations(convertedData);
-                drawNames(convertedData);
+                //convertedData = data;
+                setupData = data;
+                drawLines(data);
+                drawStations(data);
+                drawNames(data);
             })
             .catch(error => console.error('Error fetching coordinates:',error));
+    }
+
+    function fetchTrainUpdates(){
+        fetch('index.php?type=update')
+            .then(response =>response.json())
+            .then(data =>{
+                updatePosition(data);
+                requestAnimationFrame(fetchTrainUpdates);
+            })
+            .catch(error => console.error('Error fetching trip updates:', error));
     }
     function applyConversionFactor(coords, factor) {
         return coords.map(coord => {
@@ -45,10 +57,47 @@ window.onload=function(){
     }
     function drawNames(coords) {
         ctx.fillStyle = 'white';
-        ctx.font = '14px sans serif';
+        ctx.font = '20px sans serif';
         coords.forEach(coord => {
-            ctx.fillText(coord.label, coord.x + 10, coord.y + 10);
+            ctx.fillText(coord.label, coord.x, coord.y + 40);
         });
     }
+    function updatePosition(updateData) {
+        for (let i = 0; i < updateData.length; i++){
+            const train = updateData[i];
+            if(train.running){
+                let x = 0;
+                let y = 0;
+                for (let j = 0; j < setupData.length; j++){
+                    if(train.prev_stop == setupData[j].label){
+                        const thisStop = setupData[j];
+                        x = thisStop.x;
+                        y = thisStop.y;
+                        if (train.progress!=0){
+                            const nextStop = setupData[j+1];
+                            x += (nextStop.x - x)*train.progress;
+                            y += (nextStop.y - y)*train.progress;
+                        }
+                        break;
+                    }
+                }
+                drawTrain(x , y);
+            }
+        }
+    }
+    function drawTrain(x , y){
+        ctx.fillStyle='blue';
+        const width = 20;
+        const height = 20;
+
+        const topLeftX=x - width/2;
+        const topLeftY = y-height/2;
+
+        ctx.fillRect(topLeftX, topLeftY, width, height);
+    }
+
     fetchStationCoordinates();
+    fetchTrainUpdates();
+
+
 }
