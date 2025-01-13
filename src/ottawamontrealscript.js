@@ -5,12 +5,9 @@ window.onload=function(){
     let setupData = [];
 
     function fetchStationCoordinates(){
-        fetch('index.php')
+        fetch('index.php?type=setup')
             .then(response =>response.json())
             .then(data =>{
-                // const conversionFactor = 1;
-                // const convertedData = apply;
-                //convertedData = data;
                 setupData = data;
                 drawLines(data);
                 drawStations(data);
@@ -27,15 +24,6 @@ window.onload=function(){
                 requestAnimationFrame(fetchTrainUpdates);
             })
             .catch(error => console.error('Error fetching trip updates:', error));
-    }
-    function applyConversionFactor(coords, factor) {
-        return coords.map(coord => {
-            return {
-                x: coord.x * factor,
-                y: coord.y * factor,
-                label: coord.label
-            };
-        });
     }
     function drawLines(coords){
         ctx.beginPath();
@@ -66,8 +54,8 @@ window.onload=function(){
         for (let i = 0; i < updateData.length; i++){
             const train = updateData[i];
             if(train.running){
-                let x = 0;
-                let y = 0;
+                let x = setupData[0].x;
+                let y = setupData[0].y;
                 for (let j = 0; j < setupData.length; j++){
                     if(train.prev_stop == setupData[j].label){
                         const thisStop = setupData[j];
@@ -75,8 +63,8 @@ window.onload=function(){
                         y = thisStop.y;
                         if (train.progress!=0){
                             const nextStop = setupData[j+1];
-                            x += (nextStop.x - x)*train.progress;
-                            y += (nextStop.y - y)*train.progress;
+                            x += (nextStop.x - x)*train.progress/100;
+                            y += (nextStop.y - y)*train.progress/100;
                         }
                         break;
                     }
@@ -90,8 +78,8 @@ window.onload=function(){
         const width = 20;
         const height = 20;
 
-        const topLeftX=x - width/2;
-        const topLeftY = y-height/2;
+        const topLeftX=  x - width/2;
+        const topLeftY = y - height/2;
 
         ctx.fillRect(topLeftX, topLeftY, width, height);
     }

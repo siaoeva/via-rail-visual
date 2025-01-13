@@ -1,8 +1,9 @@
 <?php
 date_default_timezone_set('America/Toronto');
 $available_trips = array();
+$coordinates = array();
 function setup(){
-    global $available_trips;
+    global $available_trips, $coordinates;
     $hs= "localhost";
     $us = "root";
     $ps = "BlueLemonadeCats87/";
@@ -30,7 +31,6 @@ function setup(){
         }
 
         $coordinates = standardize_coors($available_stops);
-        echo json_encode($coordinates);
     }
     
     mysqli_close($conn);
@@ -61,7 +61,7 @@ function standardize_coors($available_stops){
     $scale = max($max_x - $min_x, $max_y - $min_y);
 
     foreach($available_stops as $stop){
-        $stop_x = (int) (($stop["x"]-$translation_x)*(2/$scale)*300 + 300);
+        $stop_x = (int) (($stop["x"]-$translation_x)*(2/$scale)*300 + 500);
         $stop_y = (int) (-($stop["y"]-$translation_y)*(2/$scale)*300 + 300); //flipped negative is a mcgyver solution
         $standardized_stop = array("x" => $stop_x , "y" => $stop_y, "label" => $stop["label"]);
         $coordinates[] = $standardized_stop;
@@ -70,11 +70,13 @@ function standardize_coors($available_stops){
     return $coordinates;
 }
 
-function get_trips_update(){
+function update(){
     global $available_trips;
+    $all_trip_info = array();    
     foreach($available_trips as $trip_id){
-        get_trip_update($trip_id);
+        $all_trip_info[] = get_trip_update($trip_id);
     }
+    echo json_encode($all_trip_info);
 }
 
 function get_trip_update($trip_id){
@@ -94,7 +96,7 @@ function get_trip_update($trip_id){
         $calendar_info = mysqli_fetch_assoc($result);
 
         $current_date = (int)('20' . date("ymd"));
-        $current_weekday = strtolower(date("l"));
+        $current_weekday = 'sunday';//strtolower(date("l"));
 
         $start_date = (int) $calendar_info['start_date'];
         $end_date = (int) $calendar_info['end_date'];
@@ -118,7 +120,7 @@ function get_trip_update($trip_id){
         $trip_info['direction'] = (int) mysqli_fetch_assoc($result)['direction_id'];
 
         //check that trip is running at current time
-        $current_time = strtotime("10:12:00");//time();
+        $current_time = strtotime("10:30:00");//time();
         $sql = "SELECT arrival_time, departure_time, stop_id FROM available_stop_times WHERE trip_id = ?";
         $result = mysqli_execute_query($conn, $sql, [$trip_id]);
         $trip_times = array();
@@ -128,7 +130,7 @@ function get_trip_update($trip_id){
         if ($current_time < strtotime($trip_times[0]['arrival_time']) or $current_time > strtotime($trip_times[count($trip_times)-1]['arrival_time'])){
             $trip_info["running"] = false;
         }
-
+        
         //if trip is running, get name of previous stop and progress
         if ($trip_info["running"]){
             $index_next_stop = search_next_stop($trip_times, $current_time, $current_date);
@@ -154,7 +156,7 @@ function get_trip_update($trip_id){
             $trip_info["prev_stop"] = mysqli_fetch_assoc($result)["stop_name"];
             $trip_info["progress"] = 0;
         }
-        // echo json_encode($trip_info);
+        return $trip_info;
     }
     mysqli_close($conn);
 }
@@ -169,11 +171,11 @@ function search_next_stop($trip_times, $current_time,$current_date){
     }
     return $i;
 }
-
+setup();
 if ($_GET['type'] == 'update') {
     update();
 } else {
-    setup();
+    echo json_encode($coordinates);
 }
 
 ?>
