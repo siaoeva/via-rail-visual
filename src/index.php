@@ -2,6 +2,12 @@
 date_default_timezone_set('America/Toronto');
 $available_trips = array();
 $coordinates = array();
+
+//check if user wants inputted time instead of currenttime
+$input_time = mktime(0, 0, 0);
+$input_day = 'monday';
+$time_switch = true;
+
 function setup(){
     global $available_trips, $coordinates;
     $hs= "localhost";
@@ -70,16 +76,16 @@ function standardize_coors($available_stops){
     return $coordinates;
 }
 
-function update(){
+function update($time_switch, $input_time, $input_day){
     global $available_trips;
     $all_trip_info = array();    
     foreach($available_trips as $trip_id){
-        $all_trip_info[] = get_trip_update($trip_id);
+        $all_trip_info[] = get_trip_update($trip_id,$time_switch, $input_time, $input_day);
     }
     echo json_encode($all_trip_info);
 }
 
-function get_trip_update($trip_id){
+function get_trip_update($trip_id, $time_switch, $input_time, $input_day){
     $trip_info = array('running' => true);
     $hs= "localhost";
     $us = "root";
@@ -96,7 +102,10 @@ function get_trip_update($trip_id){
         $calendar_info = mysqli_fetch_assoc($result);
 
         $current_date = (int)('20' . date("ymd"));
-        $current_weekday = 'sunday';//strtolower(date("l"));
+        $current_weekday = strtolower(date("l"));
+        if ($time_switch){
+            $current_weekday = $input_day;
+        }
 
         $start_date = (int) $calendar_info['start_date'];
         $end_date = (int) $calendar_info['end_date'];
@@ -108,25 +117,28 @@ function get_trip_update($trip_id){
             $trip_info["running"] = false;
         }
         
-        $sql = "SELECT * FROM calendar_dates WHERE service_id = ?";
-        $result = mysqli_execute_query($conn, $sql, [$trip_id]);
+        $sql = "SELECT * FROM calendar_dates WHERE service_id = ? AND `date` = ?";
+        $result = mysqli_execute_query($conn, $sql, [$trip_id, $current_date]);
         if (mysqli_num_rows($result) > 0){
             $trip_info["running"] = false;
         }
-
         //get trip direction
         $sql = "SELECT direction_id FROM trips WHERE trip_id = ?";
         $result = mysqli_execute_query($conn, $sql, [$trip_id]);
         $trip_info['direction'] = (int) mysqli_fetch_assoc($result)['direction_id'];
 
         //check that trip is running at current time
-        $current_time = strtotime("10:30:00");//time();
+        $current_time = time();
+        if ($time_switch){
+            $current_time = $input_time;
+        }
         $sql = "SELECT arrival_time, departure_time, stop_id FROM available_stop_times WHERE trip_id = ?";
         $result = mysqli_execute_query($conn, $sql, [$trip_id]);
         $trip_times = array();
         while ($stop_info = mysqli_fetch_assoc($result)){
             $trip_times[] = $stop_info;
         }
+
         if ($current_time < strtotime($trip_times[0]['arrival_time']) or $current_time > strtotime($trip_times[count($trip_times)-1]['arrival_time'])){
             $trip_info["running"] = false;
         }
@@ -156,6 +168,8 @@ function get_trip_update($trip_id){
             $trip_info["prev_stop"] = mysqli_fetch_assoc($result)["stop_name"];
             $trip_info["progress"] = 0;
         }
+        $trip_info["running"] = true;
+        $trip_info["label"] = $trip_id;
         return $trip_info;
     }
     mysqli_close($conn);
@@ -171,11 +185,29 @@ function search_next_stop($trip_times, $current_time,$current_date){
     }
     return $i;
 }
+
 setup();
-if ($_GET['type'] == 'update') {
-    update();
-} else {
-    echo json_encode($coordinates);
+if (!empty($_GET)){
+    if ($_GET['type'] == 'update') {
+        $time_switch = false;
+        $hour = 0;
+        $minute = 0;
+        $second = 0;
+        $day = "monday";
+        if (isset($_GET['hour']) and isset($_GET['min']) and isset($_GET['sec']) and isset($_GET['day'])) {
+            if (!($_GET['hour'] == "" or $_GET['min'] == "" or $_GET['sec'] == "" or $_GET['day'] == "")){
+                $time_switch = true;
+            }
+            $hour = (int)$_GET['hour'];
+            $minute = (int)$_GET['min'];
+            $second = (int)$_GET['sec'];
+            $input_day = $_GET['day'];
+        }
+        $input_time = mktime($hour, $minute, $second);
+        update($time_switch, $input_time, $input_day);
+    } elseif($_GET['type'] == 'setup') {
+        echo json_encode($coordinates);
+    }
 }
 
 ?>

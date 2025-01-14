@@ -1,8 +1,16 @@
 window.onload=function(){
     const canvas = document.getElementById('plotCanvas');
     const ctx = canvas.getContext('2d');
+    
+    const sizeWidth = ctx.canvas.clientWidth;
+    const sizeHeight = ctx.canvas.clientHeight;
 
     let setupData = [];
+    let hour_value = "";
+    let minutes_value = "";
+    let seconds_value = "";
+    let day_value = "";
+
 
     function fetchStationCoordinates(){
         fetch('index.php?type=setup')
@@ -17,14 +25,21 @@ window.onload=function(){
     }
 
     function fetchTrainUpdates(){
-        fetch('index.php?type=update')
+        url = `index.php?type=update&hour=${hour_value}&min=${minutes_value}&sec=${seconds_value}&day=${day_value}`;
+        fetch(type=url)
             .then(response =>response.json())
             .then(data =>{
+                ctx.clearRect (0 , 0 , sizeWidth , sizeHeight);
+                drawLines(setupData);
+                drawStations(setupData);
+                drawNames(setupData);
                 updatePosition(data);
+                
                 requestAnimationFrame(fetchTrainUpdates);
             })
             .catch(error => console.error('Error fetching trip updates:', error));
     }
+
     function drawLines(coords){
         ctx.beginPath();
         ctx.moveTo(coords[0].x,coords[0].y);
@@ -35,6 +50,7 @@ window.onload=function(){
         ctx.lineWidth = 10;
         ctx.stroke();
     }
+
     function drawStations(coords) {
         ctx.fillStyle = 'white';
         coords.forEach(coord => {
@@ -43,6 +59,7 @@ window.onload=function(){
             ctx.fill();
         });
     }
+
     function drawNames(coords) {
         ctx.fillStyle = 'white';
         ctx.font = '20px sans serif';
@@ -50,6 +67,7 @@ window.onload=function(){
             ctx.fillText(coord.label, coord.x, coord.y + 40);
         });
     }
+
     function updatePosition(updateData) {
         for (let i = 0; i < updateData.length; i++){
             const train = updateData[i];
@@ -70,9 +88,15 @@ window.onload=function(){
                     }
                 }
                 drawTrain(x , y);
+
+                // draw train id on top of it
+                ctx.fillStyle = 'white';
+                ctx.font = '15px sans serif';
+                ctx.fillText(train.label, x, y - 40);
             }
         }
     }
+
     function drawTrain(x , y){
         ctx.fillStyle='blue';
         const width = 20;
@@ -84,8 +108,24 @@ window.onload=function(){
         ctx.fillRect(topLeftX, topLeftY, width, height);
     }
 
+    let timeForm = document.getElementById("time_form");
+    timeForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        hour_value = document.getElementById("hour").value;
+        minutes_value = document.getElementById("minutes").value;
+        seconds_value = document.getElementById("seconds").value;
+        day_value = document.getElementById("day").value.toLowerCase();
+        checkDayValue();
+    });
+
+    function checkDayValue(){
+        weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+        if (!weekdays.includes(day_value)){
+            day_value = "";
+        }
+    }
+    
     fetchStationCoordinates();
     fetchTrainUpdates();
-
 
 }
