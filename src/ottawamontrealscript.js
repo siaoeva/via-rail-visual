@@ -10,6 +10,7 @@ window.onload=function(){
     let minutes_value = "";
     let seconds_value = "";
     let day_value = "";
+    let count = 0;
 
 
     function fetchStationCoordinates(){
@@ -26,18 +27,22 @@ window.onload=function(){
 
     function fetchTrainUpdates(){
         url = `index.php?type=update&hour=${hour_value}&min=${minutes_value}&sec=${seconds_value}&day=${day_value}`;
+        if (count > 20){
         fetch(type=url)
             .then(response =>response.json())
             .then(data =>{
-                ctx.clearRect (0 , 0 , sizeWidth , sizeHeight);
-                drawLines(setupData);
-                drawStations(setupData);
-                drawNames(setupData);
-                updatePosition(data);
-                
-                requestAnimationFrame(fetchTrainUpdates);
+                    ctx.clearRect (0 , 0 , sizeWidth , sizeHeight);
+                    drawLines(setupData);
+                    drawStations(setupData);
+                    drawNames(setupData);
+                    updatePosition(data);
             })
             .catch(error => console.error('Error fetching trip updates:', error));
+            count = 0;
+        }else{
+            count += 1;
+        }
+        requestAnimationFrame(fetchTrainUpdates);
     }
 
     function drawLines(coords){
@@ -124,7 +129,6 @@ window.onload=function(){
             day_value = "";
         }
     }
-    
     fetchStationCoordinates();
     fetchTrainUpdates();
 

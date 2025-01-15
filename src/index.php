@@ -89,12 +89,12 @@ function standardize_coors($available_stops){
     return $coordinates;
 }
 
-function setup($conn, $route_name, $first_setup){
+function setup($conn, $route_name, $change_tables){
     global $available_trips, $coordinates;
     
     mysqli_select_db($conn, 'gtfs_to_sql');
     $route_id = get_route_id($conn, $route_name);
-    if ($first_setup){
+    if ($change_tables){
         update_tables($conn, $route_id);
     }
     $available_trips = get_trip_ids($conn, $route_name);
@@ -207,8 +207,7 @@ function search_next_stop($trip_times, $current_time,$current_date){
     return $i;
 }
 
-// $route_name = "Toronto - New York"; //example input
-
+$route_name = "Toronto - New York";
 $hs= "localhost";
 $us = "root";
 $ps = "BlueLemonadeCats87/";
@@ -216,14 +215,13 @@ $conn = mysqli_connect($hs, $us, $ps);
 if(!$conn){
     die('mysql not connected');
 }else{
-    
+
     if (!empty($_GET)){
         if ($_GET['type'] == 'setup') {
             setup($conn, $route_name, true);
             echo json_encode($coordinates);
         }elseif($_GET['type'] == 'update') {
             setup($conn, $route_name, false);
-
             $time_switch = false;
             $hour = 0;
             $minute = 0;
@@ -244,7 +242,4 @@ if(!$conn){
     }
 }
 mysqli_close($conn);
-
-
-
 ?>
